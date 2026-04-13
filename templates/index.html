@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <span class="title-icon">⬡</span>
+        KRAIT Dashboard
+    </h1>
+    <p class="page-subtitle">Network Security Intelligence — Educational Platform</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">⊕</div>
+        <div class="stat-value">{{ stats.total }}</div>
+        <div class="stat-label">Total Scans</div>
+    </div>
+    <div class="stat-card stat-success">
+        <div class="stat-icon">✓</div>
+        <div class="stat-value">{{ stats.completed }}</div>
+        <div class="stat-label">Completed</div>
+    </div>
+    <div class="stat-card stat-warning">
+        <div class="stat-icon">⟳</div>
+        <div class="stat-value">{{ stats.running }}</div>
+        <div class="stat-label">Running</div>
+    </div>
+    <div class="stat-card stat-danger">
+        <div class="stat-icon">✕</div>
+        <div class="stat-value">{{ stats.failed }}</div>
+        <div class="stat-label">Failed</div>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <div class="panel">
+        <div class="panel-header">
+            <h2 class="panel-title">Quick Scan</h2>
+            <a href="{{ url_for('scan_page') }}" class="btn btn-sm btn-primary">Full Options →</a>
+        </div>
+        <div class="panel-body">
+            <form id="quick-scan-form">
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label class="form-label">TARGET</label>
+                        <input type="text" id="quick-target" class="form-input" placeholder="scanme.nmap.org">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">PORTS</label>
+                        <select id="quick-ports" class="form-input">
+                            <option value="common">Common (35 ports)</option>
+                            <option value="1-1024">1-1024</option>
+                            <option value="1-65535">All Ports</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" id="quick-scan-btn">
+                    <span class="btn-icon">⊕</span> Launch Scan
+                </button>
+            </form>
+
+            <div id="quick-scan-status" class="scan-status-box" style="display:none;">
+                <div class="status-header">
+                    <span id="status-text">Initializing...</span>
+                    <span id="status-badge" class="badge badge-running">RUNNING</span>
+                </div>
+                <div class="progress-bar-wrap">
+                    <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+                </div>
+                <p id="status-message" class="status-msg"></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            <h2 class="panel-title">System Info</h2>
+        </div>
+        <div class="panel-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Scan Engine</span>
+                    <span class="info-value badge badge-success">TCP Connect</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">AI Analysis</span>
+                    <span class="info-value badge badge-info">Groq LLaMA-3</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Database</span>
+                    <span class="info-value badge badge-success">Active</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Max Concurrent</span>
+                    <span class="info-value">100 threads</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Mode</span>
+                    <span class="info-value">Educational</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Auth Logging</span>
+                    <span class="info-value badge badge-success">Enabled</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="panel mt-4">
+    <div class="panel-header">
+        <h2 class="panel-title">Recent Scans</h2>
+        <a href="{{ url_for('history') }}" class="btn btn-sm btn-outline">View All</a>
+    </div>
+    <div class="panel-body">
+        {% if recent_scans %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Target</th>
+                    <th>Type</th>
+                    <th>Open Ports</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for scan in recent_scans %}
+                <tr>
+                    <td class="td-id">{{ scan.id }}</td>
+                    <td class="td-target">{{ scan.target }}</td>
+                    <td>{{ scan.scan_type or 'tcp_connect' }}</td>
+                    <td class="td-ports">
+                        {% if scan.open_ports %}
+                            <span class="port-count">{{ scan.open_ports|length }}</span>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ 'success' if scan.status == 'completed' else ('warning' if scan.status == 'running' else ('info' if scan.status == 'queued' else 'danger')) }}">
+                            {{ scan.status.upper() }}
+                        </span>
+                    </td>
+                    <td class="td-date">{{ scan.created_at[:16] if scan.created_at else '—' }}</td>
+                    <td>
+                        {% if scan.status == 'completed' %}
+                        <a href="{{ url_for('results', scan_id=scan.id) }}" class="btn btn-xs btn-outline">Report</a>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">⊘</div>
+            <p>No scans yet. Launch your first scan above.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('quick-scan-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const target = document.getElementById('quick-target').value.trim();
+    const portRange = document.getElementById('quick-ports').value;
+    if (!target) { showAlert('Enter a target', 'error'); return; }
+    await launchScan(target, portRange);
+});
+
+async function launchScan(target, portRange) {
+    const btn = document.getElementById('quick-scan-btn');
+    const statusBox = document.getElementById('quick-scan-status');
+    btn.disabled = true;
+    btn.textContent = 'Launching...';
+    statusBox.style.display = 'block';
+
+    try {
+        const resp = await fetch('/api/scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target, port_range: portRange, scan_type: 'tcp_connect' })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            showScanError(data.error || 'Scan failed');
+            btn.disabled = false;
+            btn.innerHTML = '<span class="btn-icon">⊕</span> Launch Scan';
+            return;
+        }
+        const scanId = data.scan_id;
+        document.getElementById('status-text').textContent = `Scan #${scanId}: ${target}`;
+        window._activeScanId = scanId;
+        if (window._socket) {
+            window._socket.emit('join_scan', { scan_id: scanId });
+        }
+    } catch(err) {
+        showScanError(err.message);
+        btn.disabled = false;
+        btn.innerHTML = '<span class="btn-icon">⊕</span> Launch Scan';
+    }
+}
+
+function showScanError(msg) {
+    document.getElementById('status-text').textContent = 'Error: ' + msg;
+    document.getElementById('status-badge').textContent = 'FAILED';
+    document.getElementById('status-badge').className = 'badge badge-danger';
+}
+
+window._onScanUpdate = function(data) {
+    if (data.scan_id !== window._activeScanId) return;
+    const badge = document.getElementById('status-badge');
+    const msg = document.getElementById('status-message');
+    const bar = document.getElementById('progress-bar');
+
+    bar.style.width = (data.progress || 0) + '%';
+    msg.textContent = data.message || '';
+
+    if (data.status === 'completed') {
+        badge.textContent = 'COMPLETED';
+        badge.className = 'badge badge-success';
+        document.getElementById('status-text').textContent =
+            `Found ${(data.open_ports||[]).length} open ports in ${data.duration || 0}s`;
+        document.getElementById('quick-scan-btn').disabled = false;
+        document.getElementById('quick-scan-btn').innerHTML = '<span class="btn-icon">⊕</span> Launch Scan';
+        setTimeout(() => { location.reload(); }, 2000);
+    } else if (data.status === 'failed') {
+        badge.textContent = 'FAILED';
+        badge.className = 'badge badge-danger';
+        document.getElementById('quick-scan-btn').disabled = false;
+        document.getElementById('quick-scan-btn').innerHTML = '<span class="btn-icon">⊕</span> Launch Scan';
+    } else if (data.status === 'analyzing') {
+        badge.textContent = 'ANALYZING';
+        badge.className = 'badge badge-info';
+    }
+};
+</script>
+{% endblock %}
