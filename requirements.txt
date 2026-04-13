@@ -1,0 +1,13 @@
+Flask==3.0.3
+Flask-SocketIO==5.3.6
+Flask-Limiter==3.8.0
+Flask-WTF==1.2.1
+requests==2.32.3
+beautifulsoup4==4.12.3
+groq==0.9.0
+APScheduler==3.10.4
+gunicorn==21.2.0
+gevent==24.2.1
+gevent-websocket==0.10.1
+psycopg2-binary==2.9.9
+python-dotenv==1.0.1
