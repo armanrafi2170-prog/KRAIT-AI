@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KRAIT — Access Terminal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="login-body">
+    <div class="scanline"></div>
+
+    <div class="login-container">
+        <div class="login-logo">
+            <div class="logo-hex">◈</div>
+            <h1 class="logo-title">KRAIT</h1>
+            <p class="logo-subtitle">Network Security Intelligence Platform</p>
+        </div>
+
+        <div class="login-card">
+            <div class="terminal-bar">
+                <span class="t-dot red"></span>
+                <span class="t-dot yellow"></span>
+                <span class="t-dot green"></span>
+                <span class="t-title">auth.terminal</span>
+            </div>
+
+            <div class="terminal-prompt">
+                <span class="prompt-line">$ initiating secure connection...</span>
+                <span class="prompt-line">$ identity verification required</span>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for cat, msg in messages %}
+                    <div class="alert alert-{{ cat }}">⚠ {{ msg }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('login') }}" class="login-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                    <label class="form-label">IDENTIFIER</label>
+                    <input type="text" name="username" class="form-input" placeholder="admin" value="admin" autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">ACCESS KEY</label>
+                    <input type="password" name="password" class="form-input" placeholder="••••••••" autocomplete="current-password" required autofocus>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-full">
+                    <span class="btn-icon">⊕</span> AUTHENTICATE
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <p class="warning-text">⚠ AUTHORIZED ACCESS ONLY — EDUCATIONAL USE</p>
+                <p class="warning-text">All activity is logged and monitored</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
