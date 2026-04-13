@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Scan History{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <span class="title-icon">≡</span>
+        Scan History
+    </h1>
+    <p class="page-subtitle">Complete audit log of all scans</p>
+</div>
+
+<div class="panel">
+    <div class="panel-header">
+        <h2 class="panel-title">All Scans ({{ scans|length }})</h2>
+        <div class="header-controls">
+            <input type="text" id="search-input" class="form-input form-input-sm" placeholder="Filter by target...">
+            <a href="{{ url_for('scan_page') }}" class="btn btn-sm btn-primary">New Scan</a>
+        </div>
+    </div>
+    <div class="panel-body">
+        {% if scans %}
+        <table class="data-table" id="history-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Target</th>
+                    <th>Port Range</th>
+                    <th>Open Ports</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                    <th>Date (UTC)</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for scan in scans %}
+                <tr class="scan-row" data-target="{{ scan.target }}">
+                    <td class="td-id">#{{ scan.id }}</td>
+                    <td class="td-target target-mono">{{ scan.target }}</td>
+                    <td>{{ scan.port_range or 'common' }}</td>
+                    <td class="td-ports">
+                        {% if scan.open_ports %}
+                            <span class="port-count {% if scan.open_ports|length > 10 %}port-count-high{% endif %}">
+                                {{ scan.open_ports|length }}
+                            </span>
+                            {% if scan.open_ports %}
+                            <span class="port-list">
+                                {% for p in scan.open_ports[:5] %}{{ p }}{% if not loop.last %}, {% endif %}{% endfor %}
+                                {% if scan.open_ports|length > 5 %}...{% endif %}
+                            </span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ "%.1f"|format(scan.duration_seconds or 0) }}s</td>
+                    <td>
+                        <span class="badge badge-{{ 'success' if scan.status == 'completed' else ('warning' if scan.status == 'running' else ('info' if scan.status == 'queued' else 'danger')) }}">
+                            {{ scan.status.upper() }}
+                        </span>
+                    </td>
+                    <td class="td-date">{{ scan.created_at[:16] if scan.created_at else '—' }}</td>
+                    <td>
+                        {% if scan.status == 'completed' %}
+                        <a href="{{ url_for('results', scan_id=scan.id) }}" class="btn btn-xs btn-outline">
+                            Report
+                        </a>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">⊘</div>
+            <p>No scan history. <a href="{{ url_for('scan_page') }}">Launch your first scan →</a></p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('search-input').addEventListener('input', function() {
+    const val = this.value.toLowerCase();
+    document.querySelectorAll('.scan-row').forEach(function(row) {
+        const target = row.dataset.target.toLowerCase();
+        row.style.display = target.includes(val) ? '' : 'none';
+    });
+});
+</script>
+{% endblock %}
