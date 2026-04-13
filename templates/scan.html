@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% block title %}New Scan{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <span class="title-icon">⊕</span>
+        New Security Scan
+    </h1>
+    <p class="page-subtitle">TCP Connect Port Scanner with AI Analysis</p>
+</div>
+
+<div class="scan-layout">
+    <div class="panel panel-scan">
+        <div class="panel-header">
+            <h2 class="panel-title">Scan Configuration</h2>
+        </div>
+        <div class="panel-body">
+            <div class="warning-banner">
+                ⚠ AUTHORIZED USE ONLY — Only scan targets you own or have written permission to test.
+                All scans are logged with your IP address and timestamp.
+            </div>
+
+            <form id="scan-form">
+                <div class="form-group">
+                    <label class="form-label">TARGET HOST / IP</label>
+                    <input type="text" id="scan-target" class="form-input form-input-lg"
+                        placeholder="e.g. scanme.nmap.org or 93.184.216.34"
+                        autocomplete="off" spellcheck="false">
+                    <span class="form-hint">Domain or IP address (private/internal ranges blocked)</span>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label class="form-label">PORT RANGE</label>
+                        <select id="scan-port-preset" class="form-input" onchange="handlePortPreset(this)">
+                            <option value="common">Common Ports (~35)</option>
+                            <option value="top100">Top 100</option>
+                            <option value="1-1024">Well-known (1-1024)</option>
+                            <option value="1-65535">Full Range (1-65535)</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                    </div>
+                    <div class="form-group flex-1" id="custom-port-group" style="display:none;">
+                        <label class="form-label">CUSTOM PORTS</label>
+                        <input type="text" id="scan-custom-ports" class="form-input"
+                            placeholder="e.g. 80,443,8080 or 1-1000">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">SCAN SPEED</label>
+                    <div class="speed-selector">
+                        <label class="speed-option">
+                            <input type="radio" name="speed" value="slow"> 
+                            <span class="speed-label">🐢 Slow</span>
+                            <span class="speed-desc">Less intrusive</span>
+                        </label>
+                        <label class="speed-option active">
+                            <input type="radio" name="speed" value="normal" checked>
+                            <span class="speed-label">⚡ Normal</span>
+                            <span class="speed-desc">Balanced</span>
+                        </label>
+                        <label class="speed-option">
+                            <input type="radio" name="speed" value="fast">
+                            <span class="speed-label">🚀 Fast</span>
+                            <span class="speed-desc">Maximum speed</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label checkbox-label">
+                        <input type="checkbox" id="enable-ai" checked>
+                        <span>Enable AI Report (Groq LLaMA-3)</span>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">AUTHORIZATION CONFIRMATION</label>
+                    <label class="checkbox-label confirm-check">
+                        <input type="checkbox" id="confirm-auth" required>
+                        <span>I confirm I have authorization to scan this target</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg" id="launch-btn" disabled>
+                    <span class="btn-icon">⊕</span> LAUNCH SCAN
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="panel panel-status" id="scan-status-panel" style="display:none;">
+        <div class="panel-header">
+            <h2 class="panel-title">Scan Progress</h2>
+            <span id="scan-badge" class="badge badge-running">RUNNING</span>
+        </div>
+        <div class="panel-body">
+            <div class="target-display" id="target-display">—</div>
+
+            <div class="progress-container">
+                <div class="progress-bar-wrap">
+                    <div class="progress-bar" id="main-progress-bar"></div>
+                </div>
+                <div class="progress-label">
+                    <span id="progress-pct">0%</span>
+                    <span id="progress-msg">Starting...</span>
+                </div>
+            </div>
+
+            <div class="scan-log" id="scan-log">
+                <div class="log-line">$ initiating scan...</div>
+            </div>
+
+            <div id="scan-result-preview" style="display:none;" class="result-preview">
+                <div class="result-stat">
+                    <span class="r-label">Open Ports</span>
+                    <span class="r-value" id="r-open-ports">—</span>
+                </div>
+                <div class="result-stat">
+                    <span class="r-label">Scanned</span>
+                    <span class="r-value" id="r-total">—</span>
+                </div>
+                <div class="result-stat">
+                    <span class="r-label">Duration</span>
+                    <span class="r-value" id="r-duration">—</span>
+                </div>
+            </div>
+
+            <div id="view-report-btn" style="display:none;" class="mt-3">
+                <a href="#" id="report-link" class="btn btn-primary btn-full">
+                    ⊕ View Full Report
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="panel mt-4">
+    <div class="panel-header">
+        <h2 class="panel-title">Common Test Targets (Public)</h2>
+    </div>
+    <div class="panel-body">
+        <div class="target-chips">
+            <button class="chip" onclick="setTarget('scanme.nmap.org')">scanme.nmap.org</button>
+            <button class="chip" onclick="setTarget('nmap.org')">nmap.org</button>
+            <button class="chip" onclick="setTarget('example.com')">example.com</button>
+            <button class="chip" onclick="setTarget('testphp.vulnweb.com')">testphp.vulnweb.com</button>
+        </div>
+        <p class="form-hint mt-2">These targets have authorized public scanning. Always verify before scanning any target.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function setTarget(t) {
+    document.getElementById('scan-target').value = t;
+}
+
+function handlePortPreset(sel) {
+    const cg = document.getElementById('custom-port-group');
+    cg.style.display = sel.value === 'custom' ? 'block' : 'none';
+}
+
+document.getElementById('confirm-auth').addEventListener('change', function() {
+    document.getElementById('launch-btn').disabled = !this.checked;
+});
+
+document.querySelectorAll('.speed-option').forEach(opt => {
+    opt.addEventListener('click', function() {
+        document.querySelectorAll('.speed-option').forEach(o => o.classList.remove('active'));
+        this.classList.add('active');
+    });
+});
+
+let activeScanId = null;
+
+document.getElementById('scan-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const target = document.getElementById('scan-target').value.trim();
+    if (!target) { showAlert('Enter a target', 'error'); return; }
+
+    const preset = document.getElementById('scan-port-preset').value;
+    const portRange = preset === 'custom'
+        ? document.getElementById('scan-custom-ports').value.trim()
+        : preset;
+
+    if (preset === 'custom' && !portRange) {
+        showAlert('Enter custom port range', 'error'); return;
+    }
+
+    const btn = document.getElementById('launch-btn');
+    btn.disabled = true;
+    btn.textContent = 'Launching...';
+
+    document.getElementById('scan-status-panel').style.display = 'block';
+    document.getElementById('target-display').textContent = target;
+    appendLog(`$ target: ${target}`);
+    appendLog(`$ ports: ${portRange}`);
+
+    try {
+        const resp = await fetch('/api/scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target, port_range: portRange, scan_type: 'tcp_connect' })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            setFailed(data.error || 'Launch failed');
+            btn.disabled = false;
+            btn.innerHTML = '<span class="btn-icon">⊕</span> LAUNCH SCAN';
+            return;
+        }
+        activeScanId = data.scan_id;
+        appendLog(`$ scan id: ${activeScanId}`);
+        appendLog(`$ scanning ${data.total_ports} ports...`);
+        if (window._socket) window._socket.emit('join_scan', { scan_id: activeScanId });
+    } catch(err) {
+        setFailed(err.message);
+        btn.disabled = false;
+        btn.innerHTML = '<span class="btn-icon">⊕</span> LAUNCH SCAN';
+    }
+});
+
+function appendLog(msg) {
+    const log = document.getElementById('scan-log');
+    const div = document.createElement('div');
+    div.className = 'log-line';
+    div.textContent = msg;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+}
+
+function setFailed(msg) {
+    document.getElementById('scan-badge').textContent = 'FAILED';
+    document.getElementById('scan-badge').className = 'badge badge-danger';
+    appendLog(`$ ERROR: ${msg}`);
+    document.getElementById('progress-msg').textContent = msg;
+}
+
+window._onScanUpdate = function(data) {
+    if (activeScanId && data.scan_id !== activeScanId) return;
+    const bar = document.getElementById('main-progress-bar');
+    const pct = document.getElementById('progress-pct');
+    const msg = document.getElementById('progress-msg');
+    const badge = document.getElementById('scan-badge');
+
+    bar.style.width = (data.progress || 0) + '%';
+    pct.textContent = (data.progress || 0) + '%';
+    msg.textContent = data.message || '';
+
+    if (data.message) appendLog(`$ ${data.message}`);
+
+    if (data.status === 'completed') {
+        badge.textContent = 'COMPLETED';
+        badge.className = 'badge badge-success';
+
+        document.getElementById('scan-result-preview').style.display = 'flex';
+        document.getElementById('r-open-ports').textContent = (data.open_ports || []).length;
+        document.getElementById('r-total').textContent = data.total_scanned || '—';
+        document.getElementById('r-duration').textContent = data.duration ? data.duration + 's' : '—';
+
+        if (activeScanId) {
+            const link = document.getElementById('report-link');
+            link.href = '/results/' + activeScanId;
+            document.getElementById('view-report-btn').style.display = 'block';
+        }
+
+        document.getElementById('launch-btn').disabled = false;
+        document.getElementById('launch-btn').innerHTML = '<span class="btn-icon">⊕</span> LAUNCH SCAN';
+        appendLog(`$ scan complete! ${(data.open_ports||[]).length} ports open`);
+
+    } else if (data.status === 'failed') {
+        setFailed(data.message || 'Unknown error');
+        document.getElementById('launch-btn').disabled = false;
+        document.getElementById('launch-btn').innerHTML = '<span class="btn-icon">⊕</span> LAUNCH SCAN';
+    } else if (data.status === 'analyzing') {
+        badge.textContent = 'ANALYZING';
+        badge.className = 'badge badge-info';
+    }
+};
+</script>
+{% endblock %}
