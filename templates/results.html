@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Scan Results #{{ scan.id }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-row">
+        <div>
+            <h1 class="page-title">
+                <span class="title-icon">◈</span>
+                Scan Report #{{ scan.id }}
+            </h1>
+            <p class="page-subtitle">{{ scan.target }}</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('scan_page') }}" class="btn btn-outline">New Scan</a>
+            <a href="{{ url_for('history') }}" class="btn btn-outline">History</a>
+        </div>
+    </div>
+</div>
+
+<div class="results-meta">
+    <div class="meta-item">
+        <span class="meta-label">Target</span>
+        <span class="meta-value target-mono">{{ scan.target }}</span>
+    </div>
+    <div class="meta-item">
+        <span class="meta-label">Status</span>
+        <span class="meta-value">
+            <span class="badge badge-{{ 'success' if scan.status == 'completed' else 'danger' }}">
+                {{ scan.status.upper() }}
+            </span>
+        </span>
+    </div>
+    <div class="meta-item">
+        <span class="meta-label">Open Ports</span>
+        <span class="meta-value stat-number">{{ (scan.open_ports or [])|length }}</span>
+    </div>
+    <div class="meta-item">
+        <span class="meta-label">Duration</span>
+        <span class="meta-value">{{ "%.2f"|format(scan.duration_seconds or 0) }}s</span>
+    </div>
+    <div class="meta-item">
+        <span class="meta-label">Scan Date</span>
+        <span class="meta-value">{{ scan.created_at[:16] if scan.created_at else '—' }}</span>
+    </div>
+    <div class="meta-item">
+        <span class="meta-label">Port Range</span>
+        <span class="meta-value">{{ scan.port_range or 'common' }}</span>
+    </div>
+</div>
+
+{% if scan.open_ports %}
+<div class="panel mt-4">
+    <div class="panel-header">
+        <h2 class="panel-title">Open Ports ({{ (scan.open_ports or [])|length }})</h2>
+    </div>
+    <div class="panel-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Port</th>
+                    <th>Protocol</th>
+                    <th>Service</th>
+                    <th>Banner / Version</th>
+                    <th>Risk</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set risk_map = {
+                    21: 'high', 22: 'low', 23: 'critical', 25: 'medium', 53: 'medium',
+                    80: 'low', 110: 'medium', 135: 'high', 139: 'high', 143: 'medium',
+                    443: 'low', 445: 'critical', 1433: 'high', 1521: 'high', 3306: 'high',
+                    3389: 'high', 5432: 'medium', 5900: 'high', 6379: 'critical',
+                    8080: 'low', 8443: 'low', 27017: 'critical'
+                } %}
+                {% if scan.results and scan.results.port_details %}
+                    {% for p in scan.results.port_details %}
+                    {% set risk = risk_map.get(p.port, 'info') %}
+                    <tr>
+                        <td class="port-number">{{ p.port }}</td>
+                        <td>TCP</td>
+                        <td>{{ p.service or 'unknown' }}</td>
+                        <td class="banner-cell">{{ p.banner[:80] if p.banner else '—' }}</td>
+                        <td><span class="badge badge-{{ 'danger' if risk == 'critical' else ('warning' if risk == 'high' else ('info' if risk == 'medium' else 'success')) }}">{{ risk.upper() }}</span></td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    {% for port in scan.open_ports %}
+                    <tr>
+                        <td class="port-number">{{ port }}</td>
+                        <td>TCP</td>
+                        <td>{{ {21:'FTP',22:'SSH',23:'Telnet',25:'SMTP',53:'DNS',80:'HTTP',110:'POP3',135:'MSRPC',139:'NetBIOS',143:'IMAP',443:'HTTPS',445:'SMB',1433:'MSSQL',1521:'Oracle',3306:'MySQL',3389:'RDP',5432:'PostgreSQL',5900:'VNC',6379:'Redis',8080:'HTTP-Alt',8443:'HTTPS-Alt',27017:'MongoDB'}.get(port, 'unknown') }}</td>
+                        <td>—</td>
+                        <td>
+                            {% set risk = risk_map.get(port, 'info') %}
+                            <span class="badge badge-{{ 'danger' if risk == 'critical' else ('warning' if risk == 'high' else ('info' if risk == 'medium' else 'success')) }}">{{ risk.upper() }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="panel mt-4">
+    <div class="panel-body">
+        <div class="empty-state">
+            <div class="empty-icon">⊘</div>
+            <p>No open ports found. The host may be offline or ports are filtered.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="panel mt-4">
+    <div class="panel-header">
+        <h2 class="panel-title">
+            <span class="ai-badge">AI</span>
+            Security Analysis Report
+        </h2>
+    </div>
+    <div class="panel-body">
+        {% if scan.ai_report %}
+        <div class="ai-report">{{ scan.ai_report }}</div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">⊘</div>
+            <p>No AI report available. Ensure GROQ_API_KEY is configured for AI analysis.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="panel mt-4">
+    <div class="panel-header">
+        <h2 class="panel-title">Raw Scan Data</h2>
+        <button class="btn btn-sm btn-outline" onclick="toggleRaw()">Toggle</button>
+    </div>
+    <div class="panel-body" id="raw-data" style="display:none;">
+        <pre class="code-block">{{ scan.results | tojson(indent=2) if scan.results else '{}' }}</pre>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleRaw() {
+    const el = document.getElementById('raw-data');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+document.querySelectorAll('.ai-report').forEach(function(el) {
+    el.innerHTML = el.innerHTML
+        .replace(/^## (.+)$/gm, '<h3 class="report-h3">$1</h3>')
+        .replace(/^### (.+)$/gm, '<h4 class="report-h4">$1</h4>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/`(.+?)`/g, '<code>$1</code>')
+        .replace(/^\- (.+)$/gm, '<li>$1</li>')
+        .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+});
+</script>
+{% endblock %}
