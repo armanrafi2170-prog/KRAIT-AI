@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}KRAIT{% endblock %} — Network Security Scanner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    {% if session.get('authenticated') %}
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="brand-icon">◈</span>
+            <span class="brand-name">KRAIT</span>
+            <span class="brand-sub">Security Scanner</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
+                <span class="nav-icon">⬡</span> Dashboard
+            </a></li>
+            <li><a href="{{ url_for('scan_page') }}" class="nav-link {% if request.endpoint == 'scan_page' %}active{% endif %}">
+                <span class="nav-icon">⊕</span> New Scan
+            </a></li>
+            <li><a href="{{ url_for('history') }}" class="nav-link {% if request.endpoint == 'history' %}active{% endif %}">
+                <span class="nav-icon">≡</span> History
+            </a></li>
+        </ul>
+        <div class="nav-right">
+            <span class="nav-user">{{ session.get('username', 'admin') }}</span>
+            <a href="{{ url_for('logout') }}" class="nav-logout">Logout</a>
+        </div>
+    </nav>
+    {% endif %}
+
+    <main class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for cat, msg in messages %}
+                <div class="alert alert-{{ cat }}">{{ msg }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+
+    <div class="scanline"></div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
